@@ -9,13 +9,14 @@ class Main:
     def __init__(self):
         self.root: tkinter.Tk = TkinterDnD.Tk()
         self.root.configure(bg="black")
-        self.root.title("Img Viewer")
+        self.root.title("MiuzPreview")
         self.root.attributes('-topmost', True)
+        self.root.geometry("300x300")
+        self.root.eval('tk::PlaceWindow . center')
 
         self.img_lbl = tkinter.Label(master=self.root, bg="black",
-                                     width=100, height=50,
-                                     text="Перетяни сюда фото")
-        self.img_lbl.pack()
+                                     text="Перетяни сюда JPG.\nTIFF и PSD пока не работают.")
+        self.img_lbl.pack(fill="both", expand=1)
         self.img_lbl.drop_target_register(DND_FILES)
         self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.set_img(e=e))
 
@@ -25,7 +26,6 @@ class Main:
         except FileNotFoundError:
             self.img = Image.open(e.data.replace("{", "").replace("}", ""))
         except AttributeError:
-            print("no")
             return
         
         max_win = max(self.root.winfo_width(), self.root.winfo_height())
@@ -39,7 +39,7 @@ class Main:
         self.root.update_idletasks()
 
         self.img_lbl.unbind("<Configure>")
-        self.root.after(1000, lambda:
+        self.root.after(1, lambda:
                         self.img_lbl.bind("<Configure>", self.create_task)
                         )
 
