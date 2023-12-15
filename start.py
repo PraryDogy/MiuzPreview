@@ -1,8 +1,10 @@
 import tkinter
-import sys
-import traceback
-from PIL import ImageTk, Image
+from PIL import ImageTk, Image, UnidentifiedImageError
 from tkinterdnd2 import DND_FILES, TkinterDnD
+import psd_tools
+import tifffile
+import traceback
+import threading
 
 
 class Main:
@@ -15,17 +17,52 @@ class Main:
         self.root.eval('tk::PlaceWindow . center')
 
         self.img_lbl = tkinter.Label(master=self.root, bg="black",
-                                     text="Перетяни сюда JPG.\nTIFF и PSD пока не работают.")
+                                     text="Перетяните изображение сюда.")
         self.img_lbl.pack(fill="both", expand=1)
         self.img_lbl.drop_target_register(DND_FILES)
         self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.set_img(e=e))
 
-    def set_img(self, e: tkinter.Event):
+    def open_img(self, e: tkinter.Event):
+        p = e.data.strip("{}")
+
         try:
-            self.img = Image.open(e.data)
-        except FileNotFoundError:
-            self.img = Image.open(e.data.replace("{", "").replace("}", ""))
-        except AttributeError:
+            self.img = psd_tools.PSDImage.open(fp=p).composite()
+            return
+        except ValueError:
+            print(traceback.format_exc())
+            pass
+
+        try:
+            self.img = Image.open(fp=p)
+            return
+        except UnidentifiedImageError:
+            print(traceback.format_exc())
+            pass
+
+        try:
+            img = tifffile.imread(files=p)[:,:,:3]
+            if str(object=img.dtype) != "uint8":
+                img = (img/256).astype(dtype="uint8")
+            self.img = Image.fromarray(obj=img.astype("uint8"), mode="RGB")
+            return
+        except Exception:
+            print(traceback.format_exc())
+            self.img = None
+            return False
+
+
+    def set_img(self, e: tkinter.Event):
+        self.img_lbl.configure(image="", text="Пожалуйста, подождите")
+
+        task = threading.Thread(target=lambda: self.open_img(e=e))
+        task.start()
+
+        while task.is_alive():
+            # print(task)
+            self.root.update()
+
+        if not self.img:
+            self.img_lbl.configure(image="", text="Не могу открыть изображение")
             return
         
         max_win = max(self.root.winfo_width(), self.root.winfo_height())
