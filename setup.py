@@ -6,6 +6,7 @@ Usage:
 """
 
 from setuptools import setup
+from setup_ext import AdvSetup
 
 APP = ['start.py']
 DATA_FILES = []
@@ -27,3 +28,5 @@ setup(
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
 )
+
+AdvSetup(py_ver="3.11", appname="MiuzPreview")

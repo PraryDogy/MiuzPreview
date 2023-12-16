@@ -3,3 +3,5 @@ env/
 dist/
 build/
 .eggs/
+.DS_Store
+__pycache__/
