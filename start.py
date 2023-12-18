@@ -1,3 +1,4 @@
+import sys
 import threading
 import tkinter
 import traceback
@@ -94,5 +95,25 @@ class App:
         self.task = self.root.after(500, self.create_tk_img)
 
 
+class MacMenu(tkinter.Menu):
+    def __init__(self, master: tkinter.Tk):
+        menubar = tkinter.Menu(master=master)
+        self.root = master
+        tkinter.Menu.__init__(self, master=menubar)
+
+        if sys.version_info.minor < 10:
+            master.createcommand("tkAboutDialog", self.about_dialog)
+
+        master.configure(menu=menubar)
+
+    def about_dialog(self):
+        try:
+            self.root.tk.call("tk::mac::standardAboutPanel")
+        except Exception:
+            self.print_err()
+
+
 if __name__ == "__main__":
-    App().root.mainloop()
+    app = App()
+    MacMenu(master=app.root)
+    app.root.mainloop()
