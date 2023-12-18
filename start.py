@@ -43,7 +43,8 @@ class App:
                 img = Image.open(fp=src)
                 self.img = ImageOps.exif_transpose(image=img)
                 return True
-            except (UnidentifiedImageError, IsADirectoryError):
+            except (UnidentifiedImageError, IsADirectoryError, OverflowError,
+                    OSError):
                 # print(traceback.format_exc())
                 print("pillow error")
 
