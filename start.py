@@ -27,6 +27,11 @@ class App:
         self.img_lbl.drop_target_register(DND_FILES)
         self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.change_img(e=e))
 
+        self.root.bind_all(sequence="<Command-w>",
+                            func=lambda e: self.root.withdraw())
+        self.root.protocol(name="WM_DELETE_WINDOW", func=self.root.withdraw)
+        self.root.createcommand("tk::mac::ReopenApplication", self.root.deiconify)
+
     def open_img(self, src: Literal["img path"]):
         if src.endswith((".tif", ".tiff", ".TIF", ".TIFF")):
             try:
