@@ -1,7 +1,7 @@
 lib/
-env/
 dist/
 build/
 .eggs/
 .DS_Store
 __pycache__/
+env*/
