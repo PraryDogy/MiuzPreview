@@ -6,9 +6,9 @@ from typing import Literal
 
 import psd_tools
 import tifffile
-from PIL import Image, ImageOps, ImageTk, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageTk, UnidentifiedImageError, ImageCms
 from tkinterdnd2 import DND_FILES, TkinterDnD
-
+import io
 
 class App:
     def __init__(self):
@@ -51,16 +51,25 @@ class App:
             try:
                 img = Image.open(fp=src)
                 self.img = ImageOps.exif_transpose(image=img)
+
+                iccProfile = img.info.get('icc_profile')
+                iccBytes = io.BytesIO(iccProfile)
+                icc = ImageCms.ImageCmsProfile(iccBytes)
+                srgb = ImageCms.createProfile('sRGB')
+
+                self.img = ImageCms.profileToProfile(img, icc, srgb)
                 return True
-            except (UnidentifiedImageError, IsADirectoryError, OverflowError,
-                    OSError):
+            except Exception:
+            # except (UnidentifiedImageError, IsADirectoryError, OverflowError,
+                    # OSError):
                 # print(traceback.format_exc())
                 print("pillow error")
 
             try:
                 self.img = psd_tools.PSDImage.open(fp=src).composite()
                 return True
-            except (ValueError, IsADirectoryError):
+            except Exception:
+            # except (ValueError, IsADirectoryError):
                 # print(traceback.format_exc())
                 print("psd tools error")
 
