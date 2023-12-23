@@ -1,3 +1,4 @@
+import io
 import sys
 import threading
 import tkinter
@@ -6,11 +7,13 @@ from typing import Literal
 
 import psd_tools
 import tifffile
-from PIL import Image, ImageOps, ImageTk, UnidentifiedImageError, ImageCms
+from PIL import Image, ImageCms, ImageOps, ImageTk, UnidentifiedImageError
 from tkinterdnd2 import DND_FILES, TkinterDnD
-import io
 
-class App:
+from fit_img import FitImg
+
+
+class App(FitImg):
     def __init__(self):
         self.root: tkinter.Tk = TkinterDnD.Tk()
         self.root.configure(bg="black")
@@ -52,17 +55,22 @@ class App:
                 img = Image.open(fp=src)
                 self.img = ImageOps.exif_transpose(image=img)
 
-                iccProfile = img.info.get('icc_profile')
-                iccBytes = io.BytesIO(iccProfile)
-                icc = ImageCms.ImageCmsProfile(iccBytes)
-                srgb = ImageCms.createProfile('sRGB')
+                try:
+                    iccProfile = img.info.get('icc_profile')
+                    iccBytes = io.BytesIO(iccProfile)
+                    icc = ImageCms.ImageCmsProfile(iccBytes)
+                    srgb = ImageCms.createProfile('sRGB')
 
-                self.img = ImageCms.profileToProfile(img, icc, srgb)
+                    self.img = ImageCms.profileToProfile(img, icc, srgb)
+                except Exception:
+                    # print(traceback.format_exc())
+                    print("icc profile err")
+
                 return True
             except Exception:
             # except (UnidentifiedImageError, IsADirectoryError, OverflowError,
                     # OSError):
-                # print(traceback.format_exc())
+                print(traceback.format_exc())
                 print("pillow error")
 
             try:
@@ -77,9 +85,9 @@ class App:
         return False
 
     def create_tk_img(self, e: tkinter.Event = None):
-        max_win = max(self.root.winfo_width(), self.root.winfo_height())
         img_small = self.img.copy()
-        img_small.thumbnail((max_win, max_win))
+        w, h = self.root.winfo_width(), self.root.winfo_height()
+        img_small = self.fit(img=self.img.copy(), w=w, h=h)
 
         img_tk = ImageTk.PhotoImage(image=img_small)
         self.img_lbl.configure(image=img_tk, width=0, height=0)
