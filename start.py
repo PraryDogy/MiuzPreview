@@ -19,7 +19,7 @@ class App(FitImg):
         self.root.configure(bg="black")
         self.root.title("MiuzPreview")
         self.root.attributes('-topmost', True)
-        self.root.geometry("300x300")
+        self.root.geometry("300x301")
         self.root.eval('tk::PlaceWindow . center')
 
         t = ("Перетяните изображение сюда.\n"
