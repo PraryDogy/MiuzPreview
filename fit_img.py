@@ -15,7 +15,7 @@ class FitImg:
             if imw > imh:
                 print("horizontal img")
                 delta = imw/imh
-                neww, newh = w, int(w/delta)
+                neww, newh = int(h*delta), h
             else: # img h > img w
                 print("vertical img")
                 delta = imh/imw
