@@ -10,17 +10,17 @@ from setuptools import setup
 
 from setup_ext import SetupExt
 
-appname = "MiuzPreview"
+appname = "ToJpeger"
 APP = ['start.py']
-DATA_FILES = []
+DATA_FILES = ["reveal_files.scpt"]
 OPTIONS = {"iconfile": "icon.icns",
            "plist": {"CFBundleName": appname,
                      "CFBundleShortVersionString": "1.0.0",
                      "CFBundleVersion": "1.0.0",
-                     "CFBundleIdentifier":f"com.evlosh.MiuzPreview",
+                     "CFBundleIdentifier":f"com.evlosh.ToJpeger",
                      "NSHumanReadableCopyright": (
                          "Created by Evgeny Loshkarev"
-                         "\nCopyright © 2023 MIUZ Diamonds."
+                         "\nCopyright © 2024"
                          "\nAll rights reserved.")}}
 
 
