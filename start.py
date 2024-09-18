@@ -2,12 +2,10 @@ import io
 import sys
 import threading
 import tkinter
-import traceback
-from typing import Literal
 
 import psd_tools
 import tifffile
-from PIL import Image, ImageCms, ImageOps, ImageTk, UnidentifiedImageError
+from PIL import Image, ImageCms, ImageOps
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from fit_img import FitImg
@@ -17,14 +15,15 @@ class App(FitImg):
     def __init__(self):
         self.root: tkinter.Tk = TkinterDnD.Tk()
         self.root.configure(bg="black")
-        self.root.title("MiuzPreview")
-        self.root.attributes('-topmost', True)
-        self.root.geometry("300x301")
+        self.root.title("ToJpeger")
+        # self.root.attributes('-topmost', True)
+        self.root.geometry("300x300")
         self.root.eval('tk::PlaceWindow . center')
 
-        t = ("Перетяните изображение сюда.\n"
+        t = ("Перетяните изображения сюда.\n"
              "Поддерживаемые форматы:\n"
              "tiff, psd, psb, png, jpg")
+
         self.img_lbl = tkinter.Label(master=self.root, bg="black",text=t)
         self.img_lbl.pack(fill="both", expand=1)
         self.img_lbl.drop_target_register(DND_FILES)
@@ -38,86 +37,64 @@ class App(FitImg):
         if e.char == "w":
             self.root.wm_withdraw()
 
-    def open_img(self, src: Literal["img path"]):
+    def convert_img(self, src: str):
         if src.endswith((".tif", ".tiff", ".TIF", ".TIFF")):
+
             try:
                 img = tifffile.imread(files=src)[:,:,:3]
                 if str(object=img.dtype) != "uint8":
                     img = (img/256).astype(dtype="uint8")
                 self.img = Image.fromarray(obj=img.astype("uint8"), mode="RGB")
-                return True
-            except Exception:
-                # print(traceback.format_exc())
-                print("tifffle error")
 
-        else:
+                # сохраняем джепег
+                save_path = f"{src.rsplit('.', 1)[0]}.jpg"
+                self.img.save(save_path, "JPEG")
+
+            except Exception as e:
+                print("tifffle error", e)
+
+        elif src.endswith((".psd", ".PSD", ".psb", ".PSB", ".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG")):
+
+            # открываем через PIL
             try:
                 img = Image.open(fp=src)
                 self.img = ImageOps.exif_transpose(image=img)
-
+                # читаем профиль 
                 try:
                     iccProfile = img.info.get('icc_profile')
                     iccBytes = io.BytesIO(iccProfile)
                     icc = ImageCms.ImageCmsProfile(iccBytes)
                     srgb = ImageCms.createProfile('sRGB')
-
                     self.img = ImageCms.profileToProfile(img, icc, srgb)
-                except Exception:
-                    # print(traceback.format_exc())
-                    print("icc profile err")
+                    save_path = f"{src.rsplit('.', 1)[0]}.jpg"
+                    self.img.save(save_path, "JPEG")
+                except Exception as e:
+                    print("icc profile err", e)
+            except Exception as e:
+                print("pillow error", e)
+                # открываем через PSD tools
+                try:
+                    self.img = psd_tools.PSDImage.open(fp=src).composite()
+                    save_path = f"{src.rsplit('.', 1)[0]}.jpg"
+                    self.img.save(save_path, "JPEG")
+                except Exception as e:
+                    print("psd tools error", e)
 
-                return True
-            except Exception:
-            # except (UnidentifiedImageError, IsADirectoryError, OverflowError,
-                    # OSError):
-                print(traceback.format_exc())
-                print("pillow error")
+    def convert_images_list(self, img_list: list):
+        ln = len(img_list)
+        for x, img in enumerate(img_list, start=1):
+            self.convert_img(src=img)
+            self.img_lbl.configure(text=f"Конвертирую {x} из {ln}")
 
-            try:
-                self.img = psd_tools.PSDImage.open(fp=src).composite()
-                return True
-            except Exception:
-            # except (ValueError, IsADirectoryError):
-                # print(traceback.format_exc())
-                print("psd tools error")
-
-        self.img = None
-        return False
-
-    def create_tk_img(self, e: tkinter.Event = None):
-        img_small = self.img.copy()
-        w, h = self.root.winfo_width(), self.root.winfo_height()
-        img_small = self.fit(img=self.img.copy(), w=w, h=h)
-
-        img_tk = ImageTk.PhotoImage(image=img_small)
-        self.img_lbl.configure(image=img_tk, width=0, height=0)
-        self.img_lbl.image_names = img_tk
+        t = ("Перетяните изображения сюда.\n"
+             "Поддерживаемые форматы:\n"
+             "tiff, psd, psb, png, jpg")
+        self.img_lbl.configure(text=t)
 
     def change_img(self, e: tkinter.Event):
-        self.img_lbl.configure(image="", text="Пожалуйста, подождите")
-        self.img_lbl.unbind("<Configure>")
-
-        task = threading.Thread(target=self.open_img,
-                                kwargs={"src": e.data.strip("{}")})
+        images = self.root.splitlist(e.data)
+        task = threading.Thread(target=self.convert_images_list, args=(images, ))
         task.start()
-
-        while task.is_alive():
-            self.root.update()
-
-        if not self.img:
-            self.root.title(string="MiuzPreview")
-            self.img_lbl.configure(image="", text="Не могу открыть изображение")
-            self.root.update_idletasks()
-            return
-        
-        self.create_tk_img()
-        self.root.title(string=e.data.strip("{}").split("/")[-1])
-        self.img_lbl.bind("<Configure>", self.resize_win)
-
-    def resize_win(self, e: tkinter.Event = None):
-        if hasattr(self, "task"):
-            self.root.after_cancel(self.task)
-        self.task = self.root.after(500, self.create_tk_img)
 
 
 class MacMenu(tkinter.Menu):
