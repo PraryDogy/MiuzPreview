@@ -28,8 +28,8 @@ class App:
         self.img_lbl.drop_target_register(DND_FILES)
         self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.start_converting(e=e))
 
-        self.stop_btn = tkinter.Button(master=self.root,  text="Стоп", command=self.on_stop_click,
-                                       width=10, height=2, borderwidth=0, bg="red")
+        self.stop_btn = tkinter.Label(master=self.root,  text="Стоп", width=10, height=2, borderwidth=0, bg="black", fg="black")
+        self.stop_btn.bind("<ButtonRelease-1>", self.on_stop_click)
         self.stop_btn.pack(pady=10)
 
         self.root.bind(sequence="<Command-Key>", func=self.minimize)
@@ -39,7 +39,7 @@ class App:
         self.jpegs = []
         self.flag = True
 
-    def on_stop_click(self):
+    def on_stop_click(self, e):
         print("Стоп кнопка нажата!")
         self.flag = False
 
@@ -99,7 +99,8 @@ class App:
         self.jpegs.clear()
         ln = len(img_list)
         self.img_lbl.configure(text="Подготовка")
-    
+        self.stop_btn.configure(fg="white")
+
         for x, img in enumerate(img_list, start=1):
             if self.flag:
                 self.convert_img(src=img)
@@ -119,6 +120,7 @@ class App:
 
         self.img_lbl.drop_target_register(DND_FILES)
         self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.start_converting(e=e))
+        self.stop_btn.configure(fg="black")
 
     def start_converting(self, e: tkinter.Event):
         images = self.root.splitlist(e.data)
