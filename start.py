@@ -8,10 +8,9 @@ import tifffile
 from PIL import Image, ImageCms, ImageOps
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
-from fit_img import FitImg
+import subprocess
 
-
-class App(FitImg):
+class App:
     def __init__(self):
         self.root: tkinter.Tk = TkinterDnD.Tk()
         self.root.configure(bg="black")
@@ -27,11 +26,22 @@ class App(FitImg):
         self.img_lbl = tkinter.Label(master=self.root, bg="black",text=t)
         self.img_lbl.pack(fill="both", expand=1)
         self.img_lbl.drop_target_register(DND_FILES)
-        self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.change_img(e=e))
+        self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.start_converting(e=e))
+
+        self.stop_btn = tkinter.Button(master=self.root,  text="Стоп", command=self.on_stop_click,
+                                       width=10, height=2, borderwidth=0, bg="red")
+        self.stop_btn.pack(pady=10)
 
         self.root.bind(sequence="<Command-Key>", func=self.minimize)
         self.root.protocol(name="WM_DELETE_WINDOW", func=self.root.withdraw)
         self.root.createcommand("tk::mac::ReopenApplication", self.root.deiconify)
+
+        self.jpegs = []
+        self.flag = True
+
+    def on_stop_click(self):
+        print("Стоп кнопка нажата!")
+        self.flag = False
 
     def minimize(self, e: tkinter.Event):
         if e.char == "w":
@@ -49,6 +59,7 @@ class App(FitImg):
                 # сохраняем джепег
                 save_path = f"{src.rsplit('.', 1)[0]}.jpg"
                 self.img.save(save_path, "JPEG")
+                self.jpegs.append(save_path)
 
             except Exception as e:
                 print("tifffle error", e)
@@ -58,40 +69,58 @@ class App(FitImg):
             # открываем через PIL
             try:
                 img = Image.open(fp=src)
-                self.img = ImageOps.exif_transpose(image=img)
+                img = ImageOps.exif_transpose(image=img)
                 # читаем профиль 
                 try:
                     iccProfile = img.info.get('icc_profile')
                     iccBytes = io.BytesIO(iccProfile)
                     icc = ImageCms.ImageCmsProfile(iccBytes)
                     srgb = ImageCms.createProfile('sRGB')
-                    self.img = ImageCms.profileToProfile(img, icc, srgb)
+                    img = ImageCms.profileToProfile(img, icc, srgb)
                     save_path = f"{src.rsplit('.', 1)[0]}.jpg"
-                    self.img.save(save_path, "JPEG")
+                    img.save(save_path, "JPEG")
+                    self.jpegs.append(save_path)
                 except Exception as e:
                     print("icc profile err", e)
             except Exception as e:
                 print("pillow error", e)
                 # открываем через PSD tools
                 try:
-                    self.img = psd_tools.PSDImage.open(fp=src).composite()
+                    img = psd_tools.PSDImage.open(fp=src).composite()
                     save_path = f"{src.rsplit('.', 1)[0]}.jpg"
-                    self.img.save(save_path, "JPEG")
+                    img.save(save_path, "JPEG")
+                    self.jpegs.append(save_path)
                 except Exception as e:
                     print("psd tools error", e)
 
     def convert_images_list(self, img_list: list):
+        self.flag = True
+        self.img_lbl.unbind('<<Drop>>')
+        self.jpegs.clear()
         ln = len(img_list)
+        self.img_lbl.configure(text="Подготовка")
+    
         for x, img in enumerate(img_list, start=1):
-            self.convert_img(src=img)
-            self.img_lbl.configure(text=f"Конвертирую {x} из {ln}")
+            if self.flag:
+                self.convert_img(src=img)
+                self.img_lbl.configure(text=f"Конвертирую {x} из {ln}")
+            else:
+                break
 
         t = ("Перетяните изображения сюда.\n"
              "Поддерживаемые форматы:\n"
              "tiff, psd, psb, png, jpg")
-        self.img_lbl.configure(text=t)
 
-    def change_img(self, e: tkinter.Event):
+        self.img_lbl.configure(text=t)
+        reveal_script = "reveal_files.scpt"
+        
+        command = ["osascript", reveal_script] + self.jpegs
+        subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        self.img_lbl.drop_target_register(DND_FILES)
+        self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.start_converting(e=e))
+
+    def start_converting(self, e: tkinter.Event):
         images = self.root.splitlist(e.data)
         task = threading.Thread(target=self.convert_images_list, args=(images, ))
         task.start()
