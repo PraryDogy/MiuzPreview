@@ -13,31 +13,31 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 from fit_img import FitImg
 
 
-class App:
+class App(TkinterDnD.Tk):
     def __init__(self):
-        self.root: tkinter.Tk = TkinterDnD.Tk()
-        self.root.configure(bg="black")
-        self.root.title("ToJpeger")
-        # self.root.attributes('-topmost', True)
-        self.root.geometry("300x300")
-        self.root.eval('tk::PlaceWindow . center')
+        super().__init__()
+        self.configure(bg="black")
+        self.title("ToJpeger")
+        self.geometry("300x300")
+        self.eval('tk::PlaceWindow . center')
+        self.resizable(False, False)
+
+        self.bind(sequence="<Command-Key>", func=self.minimize)
+        self.protocol(name="WM_DELETE_WINDOW", func=self.withdraw)
+        self.createcommand("tk::mac::ReopenApplication", self.deiconify)
 
         t = ("Перетяните изображения сюда.\n"
              "Поддерживаемые форматы:\n"
-             "tiff, psd, psb, png, jpg")
+             "tiff, psd, psb")
 
-        self.img_lbl = tkinter.Label(master=self.root, bg="black",text=t)
+        self.img_lbl = tkinter.Label(master=self, bg="black",text=t)
         self.img_lbl.pack(fill="both", expand=1)
         self.img_lbl.drop_target_register(DND_FILES)
         self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.start_converting(e=e))
 
-        self.stop_btn = tkinter.Label(master=self.root,  text="Стоп", width=10, height=2, borderwidth=0, bg="black", fg="black")
+        self.stop_btn = tkinter.Label(master=self,  text="Стоп", width=10, height=2, borderwidth=0, bg="black", fg="black")
         self.stop_btn.bind("<ButtonRelease-1>", self.on_stop_click)
         self.stop_btn.pack(pady=10)
-
-        self.root.bind(sequence="<Command-Key>", func=self.minimize)
-        self.root.protocol(name="WM_DELETE_WINDOW", func=self.root.withdraw)
-        self.root.createcommand("tk::mac::ReopenApplication", self.root.deiconify)
 
         self.jpegs = []
         self.flag = True
@@ -47,7 +47,7 @@ class App:
 
     def minimize(self, e: tkinter.Event):
         if e.char == "w":
-            self.root.wm_withdraw()
+            self.wm_withdraw()
 
     def convert_tiff(self, src: str):
         try:
@@ -186,7 +186,7 @@ class App:
         self.stop_btn.configure(fg="black")
 
     def start_converting(self, e: tkinter.Event):
-        images = self.root.splitlist(e.data)
+        images = self.splitlist(e.data)
         task = threading.Thread(target=self.convert_images_list, args=(images, ))
         task.start()
 
@@ -211,5 +211,5 @@ class MacMenu(tkinter.Menu):
 
 if __name__ == "__main__":
     app = App()
-    MacMenu(master=app.root)
-    app.root.mainloop()
+    MacMenu(master=app)
+    app.mainloop()
