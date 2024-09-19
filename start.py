@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import subprocess
 import sys
@@ -12,6 +13,29 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from fit_img import FitImg
 
+APP_NAME = 'ToJpeger'
+CFG_DIR = os.path.join(
+    os.path.expanduser('~'), f'Library/Application Support/{APP_NAME}')
+JSON_FILE = os.path.join(CFG_DIR, "cfg.json")
+DEFAULT_DATA = {
+    "reveal": True,
+    "resize": True,
+    "size": 3000,
+    }
+
+
+def write_json(data: dict):
+    with open(JSON_FILE, "w") as file:
+        json.dump(data, file, indent=4)
+
+
+def read_json():
+    try:
+        with open(JSON_FILE, "r") as file:
+            return json.load(file)
+    except Exception:
+            return None
+    
 
 class App(TkinterDnD.Tk):
     def __init__(self):
@@ -41,6 +65,27 @@ class App(TkinterDnD.Tk):
 
         self.jpegs = []
         self.flag = True
+        self.data = None
+        self.read_data()
+
+    def read_data(self):
+
+        if not os.path.exists(CFG_DIR):
+            os.mkdir(CFG_DIR)
+
+        if not os.path.exists(JSON_FILE):
+            write_json(DEFAULT_DATA)
+            self.data = DEFAULT_DATA
+            return
+
+        read_data = read_json()
+
+        if type(read_data) != dict or not read_data or DEFAULT_DATA.keys() != read_json().keys():
+            write_json(DEFAULT_DATA)
+            self.data = DEFAULT_DATA
+            return
+
+        self.data = read_data
 
     def on_stop_click(self, e):
         self.flag = False
@@ -59,7 +104,8 @@ class App(TkinterDnD.Tk):
             if img.mode == 'RGBA':
                 img = img.convert('RGB')
 
-            img: Image.Image = FitImg.fit(img, 3000, 3000)
+            if self.data["resize"]:
+                img: Image.Image = FitImg.fit(img, self.data["size"], self.data["size"])
             # сохраняем джепег
             save_path = self.new_filename(src)
             img.save(save_path, "JPEG")
@@ -86,7 +132,8 @@ class App(TkinterDnD.Tk):
             if img.mode == 'RGBA':
                 img = img.convert('RGB')
 
-            img: Image.Image = FitImg.fit(img, 3000, 3000)
+            if self.data["resize"]:
+                img: Image.Image = FitImg.fit(img, self.data["size"], self.data["size"])
             save_path = self.new_filename(src)
             img.save(save_path, "JPEG")
             self.jpegs.append(save_path)
@@ -101,7 +148,8 @@ class App(TkinterDnD.Tk):
                 if img.mode == 'RGBA':
                     img = img.convert('RGB')
 
-                img: Image.Image = FitImg.fit(img, 3000, 3000)
+                if self.data["resize"]:
+                    img: Image.Image = FitImg.fit(img, self.data["size"], self.data["size"])
                 img.save(save_path, "JPEG")
                 self.jpegs.append(save_path)
             except Exception as e:
@@ -119,6 +167,7 @@ class App(TkinterDnD.Tk):
         return f"{src.rsplit('.', 1)[0]}{advanced_name}.jpg"
 
     def convert_images_list(self, img_list: list):
+        self.read_data()
         self.img_lbl.unbind('<<Drop>>')
         self.img_lbl.configure(text="Подготовка")
         self.stop_btn.configure(fg="white")
@@ -178,8 +227,9 @@ class App(TkinterDnD.Tk):
         self.img_lbl.configure(text=t)
         reveal_script = "reveal_files.scpt"
         
-        command = ["osascript", reveal_script] + self.jpegs
-        subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if self.data["reveal"]:
+            command = ["osascript", reveal_script] + self.jpegs
+            subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         self.img_lbl.drop_target_register(DND_FILES)
         self.img_lbl.dnd_bind('<<Drop>>', lambda e: self.start_converting(e=e))
@@ -197,6 +247,11 @@ class MacMenu(tkinter.Menu):
         self.root = master
         tkinter.Menu.__init__(self, master=menubar)
 
+        # Добавляем пункт меню "Настройки"
+        self.settings_menu = tkinter.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Настройки", menu=self.settings_menu)
+        self.settings_menu.add_command(label="Открыть настройки", command=self.open_settings)
+
         if sys.version_info.minor < 10:
             master.createcommand("tkAboutDialog", self.about_dialog)
 
@@ -208,6 +263,14 @@ class MacMenu(tkinter.Menu):
         except Exception:
             self.print_err()
 
+    def open_settings(self):
+        try:
+            subprocess.Popen(['open', JSON_FILE])
+        except Exception as e:
+            print(f"Ошибка при открытии файла настроек: {e}")
+
+    def print_err(self):
+        print("Ошибка: не удалось открыть панель О программе")
 
 if __name__ == "__main__":
     app = App()
