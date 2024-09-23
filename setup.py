@@ -12,6 +12,8 @@ from datetime import datetime
 
 from setuptools import setup
 
+from tkinter_macos import tkinter_macos_copy
+
 # ****************** DON'T CHANGE IT ******************
 
 def remove_trash():
@@ -109,9 +111,7 @@ try:
         setup_requires=[PY2APP],
         )
 
-    move_app_to_desktop(APP_NAME)
-    dest = tkinter_macos_copy()
-    from tkinter_macos import tkinter_macos_copy
+    dest = move_app_to_desktop(APP_NAME)
     tkinter_macos_copy(app_dest=dest)
     remove_trash()
 
