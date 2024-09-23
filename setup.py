@@ -110,9 +110,9 @@ try:
         )
 
     move_app_to_desktop(APP_NAME)
-    dest = copy_tcl_to_app()
-    from copy_tcl_to_app import copy_tcl_to_app
-    copy_tcl_to_app(app_dest=dest)
+    dest = tkinter_macos_copy()
+    from tkinter_macos import tkinter_macos_copy
+    tkinter_macos_copy(app_dest=dest)
     remove_trash()
 
 except Exception as e:

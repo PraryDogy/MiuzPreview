@@ -1,7 +1,7 @@
 import os
 import shutil
 
-def copy_tcl_to_app(app_dest: str, py_ver: str="3.11"):
+def tkinter_macos_copy(app_dest: str, py_ver: str="3.11"):
 
     dest = os.path.join(app_dest, "Contents/lib")
 
